@@ -92,7 +92,7 @@ Handle<Value> Socket(const Arguments& args) {
     int socktype = rp->ai_socktype;
     if(closeexec_->IsBoolean() && closeexec_->ToBoolean()->Value()) socktype |= SOCK_CLOEXEC;
     if(nonblock_->IsBoolean()  && nonblock_->ToBoolean()->Value())  socktype |= SOCK_NONBLOCK;
-    fd = socket(rp->ai_family, socktype, rp->ai_protocol);
+    fd = socket(rp->ai_family, socktype, 0);
     
     if(fd == -1){
       continue;
