@@ -61,7 +61,7 @@ int parse_addrinfo(const Arguments& args, int argi, struct addrinfo **result)
 Handle<Value> Socket(const Arguments& args) {
   HandleScope scope;
   
-  if (args.Length() != 1 || !args[0]->IsObject()) {
+  if (args.Length() < 1 || !args[0]->IsObject()) {
     ThrowException(Exception::TypeError(String::New("Wrong argument #1, expected {node: 'ip|hostname', service: 'portname', family: 'AF_UNSPEC|AF_INET|AF_INET6', socktype: 'SOCK_STREAM|SOCK_DGRAM', protocol: 0, flags: 0, bind: false}")));
     return scope.Close(Undefined());
   }
@@ -114,7 +114,7 @@ Handle<Value> Bind(const Arguments& args) {
     return scope.Close(Undefined());
   }
 
-  if (args.Length() != 1 || !args[1]->IsObject()) {
+  if (args.Length() < 2 || !args[1]->IsObject()) {
     ThrowException(Exception::TypeError(String::New("Wrong argument #2, expected {node: 'ip|hostname', service: 'portname', family: 'AF_UNSPEC|AF_INET|AF_INET6', socktype: 'SOCK_STREAM|SOCK_DGRAM', protocol: 0, flags: 0, bind: false}")));
     return scope.Close(Undefined());
   }
@@ -157,7 +157,7 @@ Handle<Value> Connect(const Arguments& args) {
     return scope.Close(Undefined());
   }
 
-  if (args.Length() != 1 || !args[1]->IsObject()) {
+  if (args.Length() < 2 || !args[1]->IsObject()) {
     ThrowException(Exception::TypeError(String::New("Wrong argument #2, expected {node: 'ip|hostname', service: 'portname', family: 'AF_UNSPEC|AF_INET|AF_INET6', socktype: 'SOCK_STREAM|SOCK_DGRAM', protocol: 0, flags: 0, bind: false}")));
     return scope.Close(Undefined());
   }
