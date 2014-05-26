@@ -84,10 +84,15 @@ Handle<Value> Socket(const Arguments& args) {
   v8::Local<v8::Object> opts       = args[0]->ToObject();
   v8::Local<v8::Value>  bind_      = opts->Get(String::NewSymbol("bind"));
   v8::Local<v8::Value>  reuseaddr_ = opts->Get(String::NewSymbol("reuseaddr"));
+  v8::Local<v8::Value>  closeexec_ = opts->Get(String::NewSymbol("closeexec"));
+  v8::Local<v8::Value>  nonblock_  = opts->Get(String::NewSymbol("nonblock"));
   
   for (rp = result; rp != NULL; rp = rp->ai_next) {
   
-    fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    int socktype = rp->ai_socktype;
+    if(closeexec_->IsBoolean() && closeexec_->ToBoolean()->Value()) socktype |= SOCK_CLOEXEC;
+    if(nonblock_->IsBoolean()  && nonblock_->ToBoolean()->Value())  socktype |= SOCK_NONBLOCK;
+    fd = socket(rp->ai_family, socktype, rp->ai_protocol);
     
     if(fd == -1){
       continue;
