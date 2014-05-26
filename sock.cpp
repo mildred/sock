@@ -81,16 +81,22 @@ Handle<Value> Socket(const Arguments& args) {
     return scope.Close(Undefined());
   }
   
+  v8::Local<v8::Object> opts       = args[0]->ToObject();
+  v8::Local<v8::Value>  bind_      = opts->Get(String::NewSymbol("bind"));
+  v8::Local<v8::Value>  reuseaddr_ = opts->Get(String::NewSymbol("reuseaddr"));
+  
   for (rp = result; rp != NULL; rp = rp->ai_next) {
   
     fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-
+    
     if(fd == -1){
       continue;
     }
-    
-    v8::Local<v8::Object> opts  = args[0]->ToObject();
-    v8::Local<v8::Value>  bind_ = opts->Get(String::NewSymbol("bind"));
+
+    if(reuseaddr_->IsBoolean()) {
+      int so_reuseaddr = reuseaddr_->ToBoolean()->Value();
+      setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddr, sizeof so_reuseaddr);
+    }
 
     if(bind_->ToBoolean()->Value()) {    
       if(bind(fd, result->ai_addr, result->ai_addrlen) == -1) {
