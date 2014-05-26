@@ -1,7 +1,7 @@
 {
    "name": "sock",
    "version": "1.0.0",
-   "main": "sock",
+   "main": "build/Release/sock.node",
    "description": "Access unix socket interface",
    "keywords": [
        "c++",
