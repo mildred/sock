@@ -15,17 +15,8 @@ using namespace v8;
 
 namespace {
 
-/*
-Handle<Value> Method(const Arguments& args) {
-  HandleScope scope;
-  return scope.Close(String::New("world"));
-}
-*/
-
-int parse_addrinfo(const Arguments& args, struct addrinfo **result)
+int parse_addrinfo(const Arguments& args, int argi, struct addrinfo **result)
 {
-  if (args.Length() != 1 || !args[0]->IsObject()) return -1;
-
   struct addrinfo hints;
   const char *node = 0, *service = 0;
   memset(&hints, 0, sizeof(struct addrinfo));
@@ -34,7 +25,7 @@ int parse_addrinfo(const Arguments& args, struct addrinfo **result)
   hints.ai_flags    = 0;
   hints.ai_protocol = 0;
 
-  v8::Local<v8::Object> opts      = args[0]->ToObject();
+  v8::Local<v8::Object> opts      = args[argi]->ToObject();
   v8::Local<v8::Value>  node_     = opts->Get(String::NewSymbol("node"));
   v8::Local<v8::Value>  service_  = opts->Get(String::NewSymbol("service"));
   v8::Local<v8::Value>  family_   = opts->Get(String::NewSymbol("family"));
@@ -77,7 +68,7 @@ Handle<Value> Socket(const Arguments& args) {
   struct addrinfo *result, *rp;
   int fd = -1;
   
-  int s = parse_addrinfo(args, &result);
+  int s = parse_addrinfo(args, 0, &result);
 
   if(s != 0) {
     ThrowException(Exception::TypeError(String::New(gai_strerror(s))));
@@ -113,97 +104,95 @@ Handle<Value> Socket(const Arguments& args) {
   }
   
   return scope.Close(Integer::New(fd));
-  /*
-  }
-  
-  
-  int domain   = 0;
-  int type     = 0;
-  int protocol = 0;
-  
-  if (args.Length() < 2) {
-    ThrowException(Exception::TypeError(String::New("Wrong number of arguments")));
-    return scope.Close(Undefined());
-  }
-  
-  v8::String::Utf8Value param_domain(args[0]->ToString());
-  
-  if     (std::string(*param_domain) == "AF_INET")  domain = AF_INET;
-  else if(std::string(*param_domain) == "AF_INET6") domain = AF_INET6;
-  else {
-    ThrowException(Exception::TypeError(String::New("Wrong argument #1, expected 'AF_INET' or 'AF_INET6' for domain")));
-    return scope.Close(Undefined());
-  }
-  
-  v8::String::Utf8Value param_type(args[1]->ToString());
-  
-  if     (std::string(*param_type) == "SOCK_STREAM") type = SOCK_STREAM;
-  else if(std::string(*param_type) == "SOCK_DGRAM")  type = SOCK_DGRAM;
-  else {
-    ThrowException(Exception::TypeError(String::New("Wrong argument #2, expected 'SOCK_STREAM' or 'SOCK_DGRAM' for type")));
-    return scope.Close(Undefined());
-  }
-
-  if (args.Length() < 3) {
-    protocol = 0;
-  } else if(args[2]->IsNumber()) {
-    protocol = args[2]->ToInteger()->Value();
-  } else {
-    ThrowException(Exception::TypeError(String::New("Wrong argument #3, expected integer for protocol")));
-    return scope.Close(Undefined());
-  }
-  
-  int sockfd = socket(domain, type, protocol);
-  
-  return scope.Close(Integer::New(sockfd));
-  */
 }
-/*
+
 Handle<Value> Bind(const Arguments& args) {
   HandleScope scope;
   
-  int sockfd = 0;
-  int res = 0;
-  
   if (args.Length() < 1 || !args[0]->IsNumber()) {
-    ThrowException(Exception::TypeError(String::New("Wrong argument #1, expected integer file descriptor")));
+    ThrowException(Exception::TypeError(String::New("Wrong argument #1, expected file descriptor")));
     return scope.Close(Undefined());
-  } else {
-    sockfd = args[0]->ToInteger()->Value();
   }
-  
-  if (args.Length() < 1 || !args[1]->IsObject()) {
-    ThrowException(Exception::TypeError(String::New("Wrong argument #2, expected {family: ...}")));
+
+  if (args.Length() != 1 || !args[1]->IsObject()) {
+    ThrowException(Exception::TypeError(String::New("Wrong argument #2, expected {node: 'ip|hostname', service: 'portname', family: 'AF_UNSPEC|AF_INET|AF_INET6', socktype: 'SOCK_STREAM|SOCK_DGRAM', protocol: 0, flags: 0, bind: false}")));
     return scope.Close(Undefined());
   }
   
-  v8::Local<v8::Object> param_addr = args[1]->ToObject();
-  v8::String::Utf8Value param_family(param_addr->Get(String::NewSymbol("family"))->ToString());
-  int family = 0;
+  struct addrinfo *result, *rp;
+  int fd = args[0]->ToInteger()->Value();
   
-  if     (std::string(*param_family) == "AF_INET")  family = AF_INET;
-  //else if(std::string(*param_family) == "AF_INET6") family = AF_INET6;
-  else {
-    ThrowException(Exception::TypeError(String::New("Wrong argument #2, expected family to be 'AF_INET' or 'AF_INET6'")));
+  int s = parse_addrinfo(args, 1, &result);
+
+  if(s != 0) {
+    ThrowException(Exception::TypeError(String::New(gai_strerror(s))));
+    freeaddrinfo(result);
     return scope.Close(Undefined());
   }
   
-  if(family == AF_INET) {
-    v8::Local<v8::Value> param_port = param_addr->Get(String::NewSymbol("port"));
-    if(!param_port->IsNumber()) {
-      ThrowException(Exception::TypeError(String::New("Wrong argument #2, expected port an integer")));
-      return scope.Close(Undefined());
+  int res = -1;
+  
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    res = bind(fd, result->ai_addr, result->ai_addrlen);
+    if(res == -1) {
+      continue;
     }
-    int port = param_port->ToInteger()->Value();
-    
-    struct sockaddr_in addr = {AF_INET, htons(port), };
-    
-    res = bind(sockfd, &addr, sizeof(struct sockaddr_in));
+  }
+  
+  freeaddrinfo(result);
+  
+  if(res == -1) {
+    ThrowException(Exception::TypeError(String::New(strerror(errno))));
+    return scope.Close(Undefined());
   }
   
   return scope.Close(Integer::New(res));
 }
-*/
+
+Handle<Value> Connect(const Arguments& args) {
+  HandleScope scope;
+  
+  if (args.Length() < 1 || !args[0]->IsNumber()) {
+    ThrowException(Exception::TypeError(String::New("Wrong argument #1, expected file descriptor")));
+    return scope.Close(Undefined());
+  }
+
+  if (args.Length() != 1 || !args[1]->IsObject()) {
+    ThrowException(Exception::TypeError(String::New("Wrong argument #2, expected {node: 'ip|hostname', service: 'portname', family: 'AF_UNSPEC|AF_INET|AF_INET6', socktype: 'SOCK_STREAM|SOCK_DGRAM', protocol: 0, flags: 0, bind: false}")));
+    return scope.Close(Undefined());
+  }
+  
+  struct addrinfo *result, *rp;
+  int fd = args[0]->ToInteger()->Value();
+  
+  int s = parse_addrinfo(args, 1, &result);
+
+  if(s != 0) {
+    ThrowException(Exception::TypeError(String::New(gai_strerror(s))));
+    freeaddrinfo(result);
+    return scope.Close(Undefined());
+  }
+  
+  int res = -1;
+  
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    res = connect(fd, result->ai_addr, result->ai_addrlen);
+    if(res == -1) {
+      continue;
+    }
+  }
+  
+  freeaddrinfo(result);
+  
+  if(res == -1) {
+    ThrowException(Exception::TypeError(String::New(strerror(errno))));
+    return scope.Close(Undefined());
+  }
+  
+  return scope.Close(Integer::New(res));
+}
+
+
 Handle<Value> Close(const Arguments& args) {
   HandleScope scope;
   
@@ -220,10 +209,10 @@ Handle<Value> Close(const Arguments& args) {
 }
 
 void init(Handle<Object> exports) {
-  //exports->Set(String::NewSymbol("hello"),  FunctionTemplate::New(Method)->GetFunction());
-  exports->Set(String::NewSymbol("socket"), FunctionTemplate::New(Socket)->GetFunction());
-  //exports->Set(String::NewSymbol("bind"),   FunctionTemplate::New(Bind)->GetFunction());
-  exports->Set(String::NewSymbol("close"),  FunctionTemplate::New(Close)->GetFunction());
+  exports->Set(String::NewSymbol("socket"),  FunctionTemplate::New(Socket)->GetFunction());
+  exports->Set(String::NewSymbol("bind"),    FunctionTemplate::New(Bind)->GetFunction());
+  exports->Set(String::NewSymbol("connect"), FunctionTemplate::New(Connect)->GetFunction());
+  exports->Set(String::NewSymbol("close"),   FunctionTemplate::New(Close)->GetFunction());
 }
 
 }
