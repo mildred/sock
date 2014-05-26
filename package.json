@@ -1,0 +1,26 @@
+{
+   "name": "sock",
+   "version": "1.0.0",
+   "main": "sock",
+   "description": "Access unix socket interface",
+   "keywords": [
+       "c++",
+       "socket"
+   ],
+   "author": {
+       "name": "Mildred Ki'Lya",
+       "email": "mildred-spam@mildred.fr",
+       "web": "http://mildred.fr"
+   },
+   "license": "MIT",
+   "repository": {
+       "type": "git",
+       "url": "git@github.com:mildred/sock.git"
+   },
+   "engines": {
+       "node": ">=0.2.0"
+   },
+   "scripts": {
+       "install": "node-gyp configure build"
+   }
+}
