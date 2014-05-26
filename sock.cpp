@@ -18,6 +18,7 @@ namespace {
 int parse_addrinfo(const Arguments& args, int argi, struct addrinfo **result)
 {
   struct addrinfo hints;
+  char service_number[16];
   const char *node = 0, *service = 0;
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family   = AF_UNSPEC;
@@ -40,6 +41,10 @@ int parse_addrinfo(const Arguments& args, int argi, struct addrinfo **result)
   
   if(node_->IsString())    node    = *node_s;
   if(service_->IsString()) service = *service_s;
+  else if(service_->IsNumber()){
+    snprintf(service_number, 16, "%ld", service_->ToInteger()->Value());
+    service = service_number;
+  }
   
   if(!family_->IsString() || *family_s == 0);
   else if(std::string(*family_s) == "AF_INET")   hints.ai_family = AF_INET;
